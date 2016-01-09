@@ -7,19 +7,94 @@ output:
 
 
 ## Loading and preprocessing the data
-
+```{r loading_and_processing_data,echo=TRUE}
+setwd("C:/Users/solot/Downloads/repdata-data-activity")
+activity <- read.csv("activity.csv", stringsAsFactors = FALSE)
+activity$date <- as.Date(activity$date, "%Y-%m-%d")
+```
 
 
 ## What is mean total number of steps taken per day?
+```{r mean_and_median,echo=TRUE}
+## Get the sums for each day into new df aggs
+aggs <- aggregate(. ~ date, data = activity, sum, na.action = na.pass)
+stepsum <- aggregate(. ~ date, data = activity, sum)
+## Plot the histogram of step sums per day
+hist(stepsum$steps, breaks = 20, main = "Frequency of Daily Sums", xlab = "Steps")
+stepsum$interval <- NULL
+print(stepsum)
 
+## Calculate the means and medians
+means   <- tapply(activity$steps, activity$date, mean)
+medians <- tapply(activity$steps, activity$date, median)
+
+aggs$mean <- means
+aggs$median <- medians
+## Remove the intervals from the aggregate data set
+aggs$interval = NULL
+print(aggs)
+```
 
 
 ## What is the average daily activity pattern?
+```{r daily_activity_pattern,echo=TRUE}
+## Create time-series plot for the intervals and step-averages
+intmeans <- aggregate(. ~ interval, data = activity, mean)
+with(intmeans, plot(interval, steps, type = "l", main = "Average Steps per 5 Minute Interval"))
 
+## Find the interval with the highest average steps
+mymax <- intmeans[which.max(intmeans$steps),"interval"]
+print(paste("The interval with the highest average number of steps is",
+            mymax, "with", round(max(intmeans$steps), digits = 2), "average steps"))
+```
 
 
 ## Imputing missing values
+```{r imputint_missing_values,echo=TRUE}
+nas <- sum(!complete.cases(activity))
+print(paste("There are", nas, "rows with missing data"))
+## Fix the NA problem by using the mean for that interval when NA is encountered
+act2 <- activity
+count <- 1
+for (i in 1:nrow(act2)) {
+        if (is.na(act2[i,"steps"])) {
+                count <- count + 1
+                inter <- act2[i, "interval"]
+                mymean <- filter(intmeans, interval == inter)[ ,"steps"]
+                act2[i, "steps"] <- mymean
+        }
+}
+## Repeat the steps from part 1 with the filled-in data set
+aggs <- aggregate(. ~ date, data = act2, sum)
+stepsum <- aggregate(. ~ date, data = act2, sum)
+hist(stepsum$steps, breaks = 20, main = "Frequency of Daily Sums", xlab = "Steps")
+stepsum$interval <- NULL
+print(stepsum)
 
+## Calculate the means and medians
+means   <- tapply(act2$steps, act2$date, mean)
+medians <- tapply(act2$steps, act2$date, median)
+
+aggs$mean <- means
+aggs$median <- medians
+## Remove the intervals from the aggregate data set
+aggs$interval = NULL
+print(aggs)
+```
 
 
 ## Are there differences in activity patterns between weekdays and weekends?
+```{r difference_weekday_weekend,echo=TRUE}
+## Add a variable for the type of day (weekday or weekend)
+act2$dtype <- c(1)
+wend <- c("Saturday", "Sunday")
+for (i in 1:nrow(act2)) {
+        if(weekdays(act2[i, "date"]) %in% wend) {
+                act2[i, "dtype"] <- 2
+        }
+}
+## factorize it
+act2$dtype <- factor(act2$dtype, labels = c("Weekday", "Weekend"))
+## plot it
+ggplot(act2, aes(interval, steps)) + geom_line() + facet_wrap(~dtype, nrow = 2) + ylim(c(-5,900))
+```
