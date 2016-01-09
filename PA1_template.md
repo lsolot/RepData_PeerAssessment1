@@ -1,15 +1,11 @@
----
-title: "Reproducible Research: Peer Assessment 1"
-output: 
-  html_document:
-    keep_md: true
----
+# Reproducible Research: Peer Assessment 1
 
 
 ## Loading and preprocessing the data
 
 ```r
-setwd("C:/Users/solot/Downloads/repdata-data-activity")
+#setwd("C:/Users/solot/Downloads/repdata-data-activity")
+setwd("/Users/Maria/Documents/git/repdata")
 activity <- read.csv("activity.csv", stringsAsFactors = FALSE)
 activity$date <- as.Date(activity$date, "%Y-%m-%d")
 ```
@@ -25,7 +21,7 @@ stepsum <- aggregate(. ~ date, data = activity, sum)
 hist(stepsum$steps, breaks = 20, main = "Frequency of Daily Sums", xlab = "Steps")
 ```
 
-![plot of chunk mean_and_median](figure/mean_and_median-1.png) 
+![](PA1_template_files/figure-html/mean_and_median-1.png)\
 
 ```r
 stepsum$interval <- NULL
@@ -175,7 +171,7 @@ intmeans <- aggregate(. ~ interval, data = activity, mean)
 with(intmeans, plot(interval, steps, type = "l", main = "Average Steps per 5 Minute Interval"))
 ```
 
-![plot of chunk daily_activity_pattern](figure/daily_activity_pattern-1.png) 
+![](PA1_template_files/figure-html/daily_activity_pattern-1.png)\
 
 ```r
 ## Find the interval with the highest average steps
@@ -218,7 +214,7 @@ stepsum <- aggregate(. ~ date, data = act2, sum)
 hist(stepsum$steps, breaks = 20, main = "Frequency of Daily Sums", xlab = "Steps")
 ```
 
-![plot of chunk imputint_missing_values](figure/imputint_missing_values-1.png) 
+![](PA1_template_files/figure-html/imputint_missing_values-1.png)\
 
 ```r
 stepsum$interval <- NULL
@@ -385,4 +381,4 @@ act2$dtype <- factor(act2$dtype, labels = c("Weekday", "Weekend"))
 ggplot(act2, aes(interval, steps)) + geom_line() + facet_wrap(~dtype, nrow = 2) + ylim(c(-5,900))
 ```
 
-![plot of chunk difference_weekday_weekend](figure/difference_weekday_weekend-1.png)
+![](PA1_template_files/figure-html/difference_weekday_weekend-1.png)\
