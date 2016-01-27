@@ -1,0 +1,151 @@
+---
+title: "Exploration of Storm Effects on Life and Property"
+author: "Lou Solot"
+date: "January 25, 2016"
+output: html_document
+---
+## Synopsis
+This report analyzes storm data across the U.S. It is based on the storm data data set which contains observations of "event types" and the resulting bodily and/or property damage. The goal of the report is to present the storm events that correlate with the highest number of fatalities/injuries and corresponding property/crop damage 
+
+
+## Data Processing
+This report contains all code used and is completely reproducible starting from the download of the available bz2 file. Although the unzipped dataset was in csv format, some cleanup needed to be done. The EVTYPE column which contained the storm event type names contained misspellings resulting in some duplicate rows. This was remedied by transforming the names to lowercase and using grep to match on common words and then choosing a common term to represent it (e.g. "tornado").
+Each financial field (property damage and crop damage) had a corresponding field with an "EXP" suffix. This field contained, for example, "K", "M", "B", etc. to denote thousands, millions or billions, respectively. There were also a few nonsensical values (such as, "+", "?"). The extension was replaced with a multiplier and used to multiply the amount field. The irrelevant fields were then discarded.
+
+
+```{r,echo=FALSE,cache=TRUE,results='hide'}
+library(dplyr)
+```
+
+```{r,echo=TRUE,cache=TRUE, results="asis"}
+wd <- "C:/Users/solot/Documents/coursera/Data Science Specialization/Reproducible Research"
+url <- "https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2"
+dfile <- "stormdata.bz2"
+setwd(wd)
+download.file(url, dfile) 
+unzipped <- bzfile(dfile, "r")
+sdata <- read.csv(unzipped)
+```
+
+## Results
+The fatalities and injuries are reported on first. The top 20 are presented in the following tables/graphs. For completeness, I included the top storm events with regards to fatalities, injuries and combined. I used log(base 10) since tornado fatalities/injuries were so high so as to squash the remaining results.
+
+### Fatalities and Injuries
+
+```{r,echo=FALSE,cache=TRUE,results='markup'}
+sdata <- select(sdata, c(8,23,24,25,26,27,28))
+```
+
+```{r,echo=FALSE,cache=TRUE,results='markup'}
+## Clean up the PROPDMGEXP column and use it as multiplier
+sdata$PROPDMGEXP <- as.character(sdata$PROPDMGEXP)
+sdata$PROPDMGEXP[sdata$PROPDMGEXP == "K"] <- "1000"
+sdata$PROPDMGEXP[sdata$PROPDMGEXP == "M"] <- "1000000"
+sdata$PROPDMGEXP[sdata$PROPDMGEXP == ""] <- "1"
+sdata$PROPDMGEXP[sdata$PROPDMGEXP == "B"] <- "1000000000"
+sdata$PROPDMGEXP[sdata$PROPDMGEXP == "b"] <- "1000000000"
+sdata$PROPDMGEXP[sdata$PROPDMGEXP == "k"] <- "1000"
+sdata$PROPDMGEXP[sdata$PROPDMGEXP == "m"] <- "1000000"
+sdata$PROPDMGEXP[sdata$PROPDMGEXP == "-"] <- "1"
+sdata$PROPDMGEXP[sdata$PROPDMGEXP == "?"] <- "1"
+sdata$PROPDMGEXP[sdata$PROPDMGEXP == "+"] <- "1"
+sdata$PROPDMGEXP[sdata$PROPDMGEXP == "H"] <- "1"
+sdata$PROPDMGEXP[sdata$PROPDMGEXP == "h"] <- "1"
+sdata$PROPDMGEXP <- as.numeric(sdata$PROPDMGEXP)
+sdata$PROPDMG <- sdata$PROPDMG * sdata$PROPDMGEXP
+## Clean up the CROPDMGEXP column and use it as multiplier
+sdata$CROPDMGEXP <- as.character(sdata$CROPDMGEXP)
+sdata$CROPDMGEXP[sdata$CROPDMGEXP == "K"] <- "1000"
+sdata$CROPDMGEXP[sdata$CROPDMGEXP == "M"] <- "1000000"
+sdata$CROPDMGEXP[sdata$CROPDMGEXP == ""] <- "1"
+sdata$CROPDMGEXP[sdata$CROPDMGEXP == "B"] <- "1000000000"
+sdata$CROPDMGEXP[sdata$CROPDMGEXP == "b"] <- "1000000000"
+sdata$CROPDMGEXP[sdata$CROPDMGEXP == "k"] <- "1000"
+sdata$CROPDMGEXP[sdata$CROPDMGEXP == "m"] <- "1000000"
+sdata$CROPDMGEXP[sdata$CROPDMGEXP == "?"] <- "1"
+sdata$CROPDMGEXP <- as.numeric(sdata$CROPDMGEXP)
+sdata$CROPDMG <- sdata$CROPDMG * sdata$CROPDMGEXP
+## Clean up the EVTYPE column
+sdata$EVTYPE <- as.character(sdata$EVTYPE)
+sdata$EVTYPE <- tolower(sdata$EVTYPE)
+#head(sdata, n = 2000)
+```
+
+```{r,echo=TRUE,cache=TRUE,results='markup'}
+#Get rid of the "EXP" columns and split the data into sub data frames, arrange, mutate, etc.
+sdata <- select(sdata, -ends_with("EXP"))
+prop <- select(sdata, -contains("IES"))
+fatal <- select(sdata, -contains("ROP"))
+fatal <- aggregate(. ~ EVTYPE, data = fatal, FUN = sum)
+fatal <- arrange(fatal, desc(FATALITIES))
+injuries <- arrange(fatal, desc(INJURIES))
+fplusi <- mutate(fatal, FPLUSI = FATALITIES + INJURIES)
+fplusi   <- arrange(fplusi, desc(FPLUSI))
+fatal <- head(fatal, n = 20)
+injuries <- head(injuries, n = 20)
+fplusi <- head(fplusi, n = 20)
+fplusi2 <- filter(fplusi, EVTYPE != "tornado")
+prop <- aggregate(. ~ EVTYPE, data = prop, FUN = sum)
+prop <- arrange(prop, desc(PROPDMG))
+crop <- arrange(prop, desc(CROPDMG))
+cplusp <- mutate(prop, CPLUSP = PROPDMG + CROPDMG)
+cplusp <- arrange(cplusp, desc(CPLUSP))
+prop <- head(prop, n = 20)
+crop <- head(crop, n = 20)
+cplusp <- head(cplusp, n = 20)
+```
+
+<b>Sorted by fatalities</b>
+```{r,results='markup',echo=FALSE}
+print(fatal)
+```
+
+<b>Sorted by injuries</b>
+```{r,results='markup',echo=FALSE}
+print(injuries)
+```
+<b>Fatalities and injuries summed and sorted
+```{r,results='markup',echo=FALSE}
+print(fplusi)
+```
+
+
+```{r, echo=FALSE,cache=TRUE,results='markup',fig.cap="Fig. 1: Storm Event Effects on fatalities/injuries",fig.height=10}
+par(mfrow = c(2,2), mar = c(9,4,4,2))
+barplot(log(fatal$FATALITIES), names.arg = fatal$EVTYPE, las = 2,col = heat.colors(length(fatal$EVTYPE)), main = "Fatalities by Storm Event",ylab = "log(FATALITIES)",yaxp = c(0,9,9))
+barplot(log(injuries$INJURIES), names.arg = injuries$EVTYPE, las = 2,col = heat.colors(length(injuries$EVTYPE)),main = "Injuries by Storm Event", ylab = "log(INJURIES)", yaxp = c(0,12,12))
+barplot(log(fplusi$FPLUSI), names.arg = fplusi$EVTYPE, las = 2,col = heat.colors(length(fplusi$EVTYPE)),main = "Sum of Fatalities and Injuries", ylab = "Log(FPLUSI)", yaxp = c(0,12,12))
+#barplot(fplusi2$FPLUSI, names.arg = fplusi2$EVTYPE, las = 2,col = heat.colors(length(fplusi2$EVTYPE)))
+```
+
+These results show that, by far, tornados have the largest effect on both fatalities and injuries. 
+
+
+
+### Cost of Property and Crop Damage
+
+<b>Sorted by property damage cost</b>
+```{r,results='markup',echo=FALSE}
+print(prop)
+```
+
+<b>Sorted by crop damage cost</b>
+```{r,results='markup',echo=FALSE}
+print(crop)
+```
+
+<b>Sorted by sum of property and crop damage cost</b>
+```{r,results='markup',echo=FALSE}
+print(cplusp)
+```
+
+```{r, echo=FALSE,cache=TRUE,results='markup',fig.cap="Fig. 1: Storm Event Cost of Property and Crop Damage" ,fig.height=10}
+par(mfrow = c(2,2), mar = c(9,4,4,2))
+#barplot(log(prop$PROPDMG), names.arg = prop$EVTYPE, las = 2,col = heat.colors(length(prop$EVTYPE)), main = "Cost of Property Damage by Storm Event",ylab = "log(PROPDMG)",yaxp = c(0,9,9))
+barplot(log(crop$CROPDMG), names.arg = crop$EVTYPE, las = 2,col = heat.colors(length(crop$EVTYPE)),main = "Cost of Crop Damage by Storm Event", ylab = "log(CROPDMG)", yaxp = c(0,25,5))
+barplot(log(prop$PROPDMG), names.arg = prop$EVTYPE, las = 2,col = heat.colors(length(prop$EVTYPE)), main = "Cost of Property Damage by Storm Event",ylab = "log(PROPDMG)", yaxp = c(0,26,5))
+barplot(log(cplusp$CPLUSP), names.arg = cplusp$EVTYPE, las = 2,col = heat.colors(length(cplusp$EVTYPE)),main = "Sum of Property and Crop Damage", ylab = "Log(CPLUSP)", yaxp = c(0,26,5))
+#barplot(fplusi2$FPLUSI, names.arg = fplusi2$EVTYPE, las = 2,col = heat.colors(length(fplusi2$EVTYPE)))
+```
+
+These results show that drought causes the highest damage cost to crops, while flooding causes the highest damage cost to property in general
