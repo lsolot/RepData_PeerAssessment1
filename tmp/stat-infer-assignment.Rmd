@@ -1,0 +1,123 @@
+---
+title: "Statistical Inference Final Assignment"
+author: "Lou Solot"
+date: "January 27, 2016"
+output: html_document
+---
+
+## Overview
+
+This report will consist of two parts. Part 1 will use simulation to compare the Central Limit Theorem with the exponential distribution. The means, standard deviations of the simulated samples will be compared with the theoretical values. 
+Part 2 will perform tests using confidence intervals and hypothesis tests on tooth growth data
+
+### Part 1
+In this part I will take 1000 simulations of 40 exponentials. Lambda will be assumed to by 0.2 for the experiment. 
+The exponential distribution mean is 1/lambda = `r 1/0.2` which is also the standard deviation
+```{r, echo=TRUE, cache=FALSE, results='markup'}
+means  <- NULL
+nosim  <- 1000
+n      <- 40
+lambda <- 0.2
+
+for (i in 1:nosim) {
+        means <- c(means, mean(rexp(n, lambda)))
+}
+hist(rexp(1000,0.2), breaks = 30, main = "Histogram of 1000 Random Exponentials",xlab = "1000 Random Exponentials with lambda of 0.2",col = "darkblue")
+```
+
+<b>As you can see, the distribution of 1000 random exponentials is not gaussian</b>
+<br></br>
+
+```{r, echo=TRUE,cache=FALSE,results='markup'}
+hist(means, breaks = 30, main = "Histogram of Exponential Means",col = "darkblue")
+```
+
+* The sample mean is mean(means) = `r mean(means)` 
+* The theoretical mean is 1/lambda = `r 1/lambda`
+* The distribution of the sample means is gaussian as the histogram above shows and is centered around the theoretical mean of 5 as predicted by the CLT
+
+```{r,echo=TRUE,cache=FALSE,results='markup'}
+vars <- NULL
+nosim <- 1000
+lambda <- 0.2
+n <- 40
+for (i in 1:nosim) {
+        vars <- c(vars, var(rexp(n, lambda)))
+}
+hist(vars, breaks = 30, main = "Histogram of Exponential Variances", xlab = "Variances", col = "darkblue")
+```
+
+
+* The theoretical variance of the random distribution is 1/lambda^2 = `r 1/lambda^2`
+* As shown in the figure above, the variance is (fairly) normally distributed, centered around the theoretical variance of 25
+<br/>
+
+
+### Part 2
+```{r,echo=TRUE,results='markup',cache=FALSE}
+library(datasets)
+library(ggplot2)
+data(ToothGrowth)
+```
+
+<br/><br/>
+
+#### Let's explore the data
+
+
+<b>Visualization of the tooth growth by dose, conditioned by supp</b></br>
+
+```{r,echo=TRUE,results='markup',cache=FALSE}
+options(warn = -1)
+qplot(dose, len, data = ToothGrowth, facets = . ~ supp, geom = c("point", "smooth"), main = "Guinea Pig Tooth Growth by Vitamin C Dosage")
+options(warn = 1)
+```
+
+<b>ToothGrowth data in long form</b><br/>
+
+```{r,echo=TRUE,results='markup',cache=FALSE}
+print(ToothGrowth)
+```
+
+<b>ToothGrowth data in wide form</b><br/>
+
+```{r,echo=TRUE,results='markup',cache=FALSE}
+## Had to add an id column because I couldn't get reshape to do what I needed otherwise
+tlong <-ToothGrowth
+tlong$id <- 1:10
+twide <- reshape(timevar = "supp", direction = "wide", data = tlong, idvar = c("id","dose"))
+twide$id <- NULL
+print(twide)
+print(mean(twide$len.VC))
+print(mean(twide$len.OJ))
+```
+
+### Confidence Intervals
+<br/><b>Let's run t-test confidence intervals since the samples are small. We will assume the null hypothesis that tooth growth will be the same with the vitamin C is delivered via Orange Juice or Ascorbic Acid</b>
+<br/><br/>
+1. Confidence interval for the 0.5 dosage
+```{r, echo=TRUE, results='markup', cache=FALSE}
+S1 <- twide[which(twide$dose == 0.5), "len.OJ"]
+S2 <- twide[which(twide$dose == 0.5), "len.VC"]
+t.test(S1, S2, var.equal = FALSE, conf.level = 0.95)
+```
+
+* This shows that we can reject the null hypothesis and conclude that Orange Juice is correlated with higher tooth growth than Ascorbic Acid
+
+2. Confidence interval for the 1.0 dosage
+```{r, echo=TRUE, results='markup', cache=FALSE}
+S1 <- twide[which(twide$dose == 1.0), "len.OJ"]
+S2 <- twide[which(twide$dose == 1.0), "len.VC"]
+t.test(S1, S2, var.equal = FALSE, conf.level = 0.95)
+```
+
+* This shows that we can reject the null hypothesis and conclude that Orange Juice is correlated with higher tooth growth than Ascorbic Acid
+
+2. Confidence interval for the 2.0 dosage
+```{r, echo=TRUE, results='markup', cache=FALSE}
+S1 <- twide[which(twide$dose == 2.0), "len.OJ"]
+S2 <- twide[which(twide$dose == 2.0), "len.VC"]
+t.test(S1, S2, var.equal = FALSE, conf.level = 0.95)
+```
+
+* This shows that we cannot reject the null hypothesis and conclude that Orange Juice and Ascorbic Acid show no meaningful statistical difference in tooth growth
